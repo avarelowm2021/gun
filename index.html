@@ -1,0 +1,193 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Validateur Mwollowm Sécurisé</title>
+  <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.1.1/crypto-js.min.js"></script>
+  <style>
+    body {
+      background-color: #111;
+      color: #0f0;
+      font-family: monospace;
+      padding: 20px;
+    }
+    input, button {
+      padding: 10px;
+      margin: 5px;
+      font-size: 1em;
+      background-color: #222;
+      color: #0f0;
+      border: 1px solid #0f0;
+      border-radius: 4px;
+    }
+    #transactions {
+      margin-top: 30px;
+    }
+    .bloc {
+      border: 1px solid #0f0;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      background-color: #000;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🔐 Accès sécurisé Mwollowm (réseau partagé)</h1>
+
+  <div id="login">
+    <input id="password" type="password" placeholder="Entrez le mot de passe">
+    <button onclick="verifierMotDePasse()">Accéder</button>
+    <div id="erreur" style="color:red;"></div>
+  </div>
+
+  <div id="app" class="hidden">
+    <h2>🌍 Validateur Réseau</h2>
+    <label>Clé privée :</label><br>
+    <input id="token" type="password" placeholder="Token secret"><br>
+    <label>Identifiant Base64 :</label><br>
+    <input id="identifiant" type="text" placeholder="ex: MC4wMDAwMDY5NDQ0NDQ0NDQ0"><br>
+    <div id="message" style="color:red;"></div>
+
+    <h3>Total cumulé : <span id="total">0</span> mwollowm</h3>
+    <button onclick="exporterCSV()">⬇️ Exporter CSV</button>
+    <button onclick="imprimerDernier()">🖨️ Imprimer dernière preuve</button>
+
+    <div id="transactions"></div>
+  </div>
+
+  <audio id="sound" preload="auto">
+    <source src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" type="audio/ogg">
+  </audio>
+
+  <script>
+    const LIMITE = 0.00000694444444444444;
+    const TOKEN_SECRET = "moalum-777";
+    const PASSWORD = "motdepasse";
+    let total = 0;
+    const gun = Gun(["https://gun-mwollowm.onrender.com"]);
+    const transactions = gun.get("mwollowm_blocs");
+    const identifiantsUtilisés = new Set();
+    const blocsStockés = {};
+    let dernierBloc = null;
+
+    function verifierMotDePasse() {
+      const mdp = document.getElementById("password").value;
+      if (mdp === PASSWORD) {
+        document.getElementById("login").classList.add("hidden");
+        document.getElementById("app").classList.remove("hidden");
+      } else {
+        document.getElementById("erreur").textContent = "❌ Mot de passe incorrect.";
+      }
+    }
+
+    document.getElementById("identifiant").addEventListener("change", () => {
+      verifierEtValider();
+    });
+
+    document.getElementById("identifiant").addEventListener("paste", () => {
+      setTimeout(() => verifierEtValider(), 100);
+    });
+
+    function verifierEtValider() {
+      const base64 = document.getElementById("identifiant").value.trim();
+      const token = document.getElementById("token").value.trim();
+      const message = document.getElementById("message");
+      message.textContent = "";
+
+      if (token !== TOKEN_SECRET) {
+        message.textContent = "❌ Clé privée incorrecte.";
+        return;
+      }
+
+      try {
+        const montantStr = atob(base64);
+        const montant = parseFloat(montantStr);
+
+        if (!montant || montant <= 0 || montant > LIMITE) {
+          message.textContent = "❌ Montant invalide.";
+          return;
+        }
+
+        if (identifiantsUtilisés.has(base64)) {
+          message.textContent = "❌ Identifiant déjà utilisé.";
+          return;
+        }
+
+        const timestamp = new Date().toISOString();
+        const hash = CryptoJS.SHA256(base64 + montant + timestamp).toString();
+
+        const bloc = {
+          id: Date.now().toString() + "-" + Math.floor(Math.random() * 10000),
+          montant,
+          identifiant_base64: base64,
+          timestamp,
+          hash
+        };
+
+        transactions.set(bloc);
+        document.getElementById("identifiant").value = "";
+        document.getElementById("sound").play();
+      } catch {
+        message.textContent = "❌ Erreur de décodage Base64.";
+      }
+    }
+
+    transactions.map().on((bloc, id) => {
+      if (!bloc || document.getElementById(id)) return;
+      if (identifiantsUtilisés.has(bloc.identifiant_base64)) return;
+
+      identifiantsUtilisés.add(bloc.identifiant_base64);
+      blocsStockés[bloc.hash] = bloc;
+      dernierBloc = bloc;
+
+      total += parseFloat(bloc.montant || 0);
+      document.getElementById("total").textContent = total.toFixed(18);
+
+      const div = document.createElement("div");
+      div.className = "bloc";
+      div.id = id;
+      div.innerHTML = `
+        <strong>ID :</strong> ${bloc.id}<br>
+        <strong>Montant :</strong> ${bloc.montant} mwollowm<br>
+        <strong>Base64 :</strong> ${bloc.identifiant_base64}<br>
+        <strong>Timestamp :</strong> ${bloc.timestamp}<br>
+        <strong>Hash :</strong> <code>${bloc.hash}</code>
+      `;
+      document.getElementById("transactions").prepend(div);
+    });
+
+    function exporterCSV() {
+      let csv = "id,montant,identifiant_base64,timestamp,hash\n";
+      for (const h in blocsStockés) {
+        const b = blocsStockés[h];
+        csv += `${b.id},${b.montant},${b.identifiant_base64},${b.timestamp},${b.hash}\n`;
+      }
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "blocs_mwollowm.csv";
+      a.click();
+    }
+
+    function imprimerDernier() {
+      if (!dernierBloc) {
+        alert("Aucune validation encore effectuée.");
+        return;
+      }
+      const win = window.open('', '', 'width=600,height=400');
+      win.document.write('<pre>' + JSON.stringify(dernierBloc, null, 2) + '</pre>');
+      win.print();
+      win.close();
+    }
+  </script>
+
+</body>
+</html>
