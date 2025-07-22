@@ -1,4 +1,17 @@
 <!DOCTYPE html>
-<p>This is the examples folder.
-<p>The most basic example is <a href="./basic/note.html">./basic/note.html</a>!</p>
-<p>Home page temporarily disabled.</p>
+<html>
+  <head>
+    <title>Gun Relay</title>
+  </head>
+  <body>
+    <h1>Gun Server is Running!</h1>
+    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+    <script>
+      const gun = Gun();
+      gun.get('test').put({ hello: 'mwollowm' });
+      gun.get('test').on(data => {
+        console.log("Data from GUN:", data);
+      });
+    </script>
+  </body>
+</html>
