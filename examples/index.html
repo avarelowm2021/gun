@@ -1,17 +1,1123 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>Gun Relay</title>
-  </head>
-  <body>
-    <h1>Gun Server is Running!</h1>
-    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
-    <script>
-      const gun = Gun();
-      gun.get('test').put({ hello: 'mwollowm' });
-      gun.get('test').on(data => {
-        console.log("Data from GUN:", data);
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visualiseur Blockchain du Cours du Mwal</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #1a1a3a, #24243e);
+      color: #f5f5f5;
+      min-height: 100vh;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    header {
+      text-align: center;
+      padding: 30px 0;
+      margin-bottom: 30px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(0, 170, 255, 0.1);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    header::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 5px;
+      background: linear-gradient(to right, #00ffcc, #00aaff, #6a11cb);
+      animation: progress 6s infinite linear;
+    }
+    
+    h1 {
+      font-size: 2.8rem;
+      margin-bottom: 10px;
+      background: linear-gradient(to right, #00ffcc, #00aaff, #9d4edd);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 2px 10px rgba(0, 200, 255, 0.3);
+      position: relative;
+      z-index: 2;
+    }
+    
+    .subtitle {
+      font-size: 1.2rem;
+      color: #bbb;
+      max-width: 700px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 2;
+    }
+    
+    .blockchain-badge {
+      background: linear-gradient(45deg, #1a2a6c, #00aaff);
+      color: white;
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      display: inline-block;
+      margin-top: 15px;
+      box-shadow: 0 0 15px rgba(0, 170, 255, 0.4);
+      animation: pulse 2s infinite;
+    }
+    
+    .content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-bottom: 30px;
+    }
+    
+    @media (max-width: 1100px) {
+      .content {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .input-section {
+      background: rgba(30, 30, 50, 0.5);
+      border-radius: 15px;
+      padding: 25px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(0, 170, 255, 0.1);
+      position: relative;
+    }
+    
+    .output-section {
+      background: rgba(30, 30, 50, 0.5);
+      border-radius: 15px;
+      padding: 25px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(0, 170, 255, 0.1);
+      grid-column: span 2;
+    }
+    
+    @media (max-width: 1100px) {
+      .output-section {
+        grid-column: span 1;
+      }
+    }
+    
+    .chart-section {
+      background: rgba(30, 30, 50, 0.5);
+      border-radius: 15px;
+      padding: 25px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(0, 170, 255, 0.1);
+      grid-column: span 2;
+      height: 500px;
+    }
+    
+    h2 {
+      color: #00ffcc;
+      margin-bottom: 20px;
+      font-size: 1.8rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-shadow: 0 0 10px rgba(0, 200, 255, 0.3);
+    }
+    
+    h2 i {
+      color: #00aaff;
+    }
+    
+    textarea {
+      width: 100%;
+      height: 250px;
+      font-family: 'Fira Code', monospace;
+      font-size: 15px;
+      padding: 15px;
+      background: rgba(20, 20, 40, 0.8);
+      color: #f5f5f5;
+      border: 2px solid #333;
+      border-radius: 8px;
+      resize: vertical;
+      transition: all 0.3s;
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+    }
+    
+    textarea:focus {
+      outline: none;
+      border-color: #00ffcc;
+      box-shadow: 0 0 0 2px rgba(0, 255, 204, 0.2), inset 0 0 10px rgba(0, 0, 0, 0.3);
+    }
+    
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin: 20px 0;
+    }
+    
+    button {
+      background: linear-gradient(to right, #00c9a7, #00aaff);
+      color: #000;
+      border: none;
+      padding: 12px 25px;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+    
+    button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(0, 200, 255, 0.4);
+    }
+    
+    button.secondary {
+      background: linear-gradient(to right, #6a11cb, #2575fc);
+      color: white;
+    }
+    
+    .examples {
+      margin-top: 20px;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 170, 255, 0.1);
+    }
+    
+    .examples h3 {
+      color: #00aaff;
+      margin-bottom: 10px;
+    }
+    
+    .examples p {
+      margin-bottom: 10px;
+      color: #bbb;
+    }
+    
+    .examples code {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      color: #00ffcc;
+    }
+    
+    .error {
+      background: rgba(255, 0, 0, 0.15);
+      color: #ff6b6b;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 15px 0;
+      display: none;
+      border-left: 4px solid #ff6b6b;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: rgba(20, 20, 40, 0.8);
+      margin-top: 20px;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+    
+    th {
+      background: linear-gradient(to right, #1a2a6c, #00aaff);
+      color: white;
+      padding: 15px;
+      text-align: left;
+      font-weight: bold;
+    }
+    
+    td {
+      padding: 12px 15px;
+      border-bottom: 1px solid rgba(0, 170, 255, 0.1);
+      color: #ddd;
+    }
+    
+    tr:last-child td {
+      border-bottom: none;
+    }
+    
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    
+    .highlight {
+      background: rgba(0, 255, 204, 0.15) !important;
+      color: #00ffcc !important;
+      font-weight: bold;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { box-shadow: inset 0 0 0 0 rgba(0, 255, 204, 0.3); }
+      50% { box-shadow: inset 0 0 10px 2px rgba(0, 255, 204, 0.5); }
+      100% { box-shadow: inset 0 0 0 0 rgba(0, 255, 204, 0.3); }
+    }
+    
+    .info-box {
+      background: rgba(0, 170, 255, 0.15);
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+      border-left: 4px solid #00aaff;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+    
+    .info-box h3 {
+      color: #00ffcc;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .footer {
+      text-align: center;
+      padding: 20px;
+      color: #aaa;
+      font-size: 0.9rem;
+      margin-top: 20px;
+    }
+    
+    .json-key {
+      color: #ff79c6;
+    }
+    
+    .json-value {
+      color: #50fa7b;
+    }
+    
+    .json-string {
+      color: #f1fa8c;
+    }
+    
+    .json-number {
+      color: #bd93f9;
+    }
+    
+    .cours-container {
+      text-align: center;
+      padding: 30px;
+      background: linear-gradient(135deg, rgba(0, 50, 100, 0.3), rgba(0, 30, 70, 0.3));
+      border-radius: 15px;
+      margin: 30px 0;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(0, 170, 255, 0.2);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .cours-container::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 5px;
+      background: linear-gradient(to right, #00ffcc, #00aaff);
+      animation: progress 3s infinite;
+    }
+    
+    @keyframes progress {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    
+    .cours-label {
+      font-size: 1.5rem;
+      color: #bbb;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+    }
+    
+    .cours-value {
+      font-size: 4rem;
+      font-weight: bold;
+      background: linear-gradient(to right, #00ffcc, #00aaff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 20px rgba(0, 200, 255, 0.5);
+      margin: 15px 0;
+      transition: all 0.5s;
+    }
+    
+    .cours-symbol {
+      font-size: 2.5rem;
+      color: #00ffcc;
+      vertical-align: super;
+      margin-right: 10px;
+    }
+    
+    .cours-date {
+      font-size: 1.2rem;
+      color: #00aaff;
+      margin-top: 10px;
+    }
+    
+    .cours-change {
+      font-size: 1.2rem;
+      margin-top: 10px;
+      padding: 5px 15px;
+      border-radius: 20px;
+      display: inline-block;
+    }
+    
+    .positive {
+      background: rgba(0, 255, 0, 0.15);
+      color: #00ff00;
+    }
+    
+    .negative {
+      background: rgba(255, 0, 0, 0.15);
+      color: #ff6b6b;
+    }
+    
+    .neutral {
+      background: rgba(128, 128, 128, 0.15);
+      color: #aaa;
+    }
+    
+    .cours-container:hover .cours-value {
+      transform: scale(1.05);
+      text-shadow: 0 0 30px rgba(0, 200, 255, 0.8);
+    }
+    
+    .noDataMessage {
+      text-align: center;
+      padding: 40px;
+      display: none;
+    }
+    
+    .noDataMessage i {
+      font-size: 3rem;
+      color: #00aaff;
+      margin-bottom: 20px;
+    }
+    
+    .noDataMessage h3 {
+      color: #00ffcc;
+      margin-bottom: 10px;
+    }
+    
+    .noDataMessage p {
+      color: #bbb;
+    }
+    
+    /* Styles pour l'historique blockchain */
+    .blockchain-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+      margin-top: 30px;
+      max-height: 400px;
+      overflow-y: auto;
+      padding: 10px;
+    }
+    
+    .block {
+      background: rgba(20, 20, 40, 0.7);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(0, 170, 255, 0.2);
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s;
+      border-left: 4px solid #00ffcc;
+    }
+    
+    .block:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 25px rgba(0, 200, 255, 0.4);
+      border-left: 4px solid #9d4edd;
+    }
+    
+    .block-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(0, 170, 255, 0.2);
+    }
+    
+    .block-index {
+      background: linear-gradient(45deg, #6a11cb, #2575fc);
+      color: white;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+    }
+    
+    .block-time {
+      font-size: 0.9rem;
+      color: #00aaff;
+    }
+    
+    .block-data {
+      margin-top: 10px;
+    }
+    
+    .block-data div {
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+    
+    .block-label {
+      color: #bbb;
+      font-size: 0.9rem;
+    }
+    
+    .block-value {
+      font-weight: bold;
+      color: #00ffcc;
+    }
+    
+    .block-variation {
+      font-weight: bold;
+      text-align: right;
+    }
+    
+    .block-variation.positive {
+      color: #00ff00;
+    }
+    
+    .block-variation.negative {
+      color: #ff6b6b;
+    }
+    
+    .blockchain-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 30px;
+    }
+    
+    /* Styles pour le graphique */
+    .chart-container {
+      position: relative;
+      height: calc(100% - 40px);
+      width: 100%;
+    }
+    
+    .chart-actions {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    
+    .chart-btn {
+      background: rgba(0, 170, 255, 0.2);
+      color: #00aaff;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.3s;
+    }
+    
+    .chart-btn:hover {
+      background: rgba(0, 170, 255, 0.3);
+    }
+    
+    .chart-btn.active {
+      background: linear-gradient(to right, #00c9a7, #00aaff);
+      color: #000;
+      font-weight: bold;
+    }
+    
+    /* Compte à rebours */
+    .countdown-container {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(0, 170, 255, 0.2);
+      padding: 8px 15px;
+      border-radius: 30px;
+    }
+    
+    .countdown-label {
+      font-size: 0.9rem;
+      color: #00aaff;
+    }
+    
+    .countdown {
+      background: rgba(0, 170, 255, 0.3);
+      color: #00ffcc;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 1.2rem;
+      box-shadow: 0 0 15px rgba(0, 200, 255, 0.4);
+      transition: all 0.3s;
+    }
+    
+    .countdown.active {
+      animation: pulseCountdown 1s infinite;
+    }
+    
+    @keyframes pulseCountdown {
+      0% { box-shadow: 0 0 0 0 rgba(0, 255, 204, 0.4); }
+      70% { box-shadow: 0 0 0 10px rgba(0, 255, 204, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(0, 255, 204, 0); }
+    }
+    
+    .security-badge {
+      position: absolute;
+      bottom: 15px;
+      right: 15px;
+      background: linear-gradient(45deg, #00c853, #00b0ff);
+      color: white;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 0 10px rgba(0, 200, 255, 0.3);
+    }
+    
+    @media (max-width: 768px) {
+      .content {
+        gap: 20px;
+      }
+      
+      .cours-value {
+        font-size: 3rem;
+      }
+      
+      .blockchain-container {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1><i class="fas fa-link"></i> Visualiseur Blockchain du Cours du Mwal</h1>
+      <p class="subtitle">Démarrez à 0.0000 € et faites évoluer le cours avec vos données</p>
+      <div class="blockchain-badge">
+        <i class="fas fa-database"></i> Historique Blockchain - Transactions permanentes
+      </div>
+    </header>
+    
+    <div class="cours-container">
+      <div class="cours-label">Cours actuel du Mwal</div>
+      <div class="cours-value">
+        <span class="cours-symbol">€</span>
+        <span id="valeurCours">0.0000</span>
+      </div>
+      <div class="cours-date">Mise à jour: <span id="updateDate">-</span></div>
+      <div class="cours-change neutral">0.00%</div>
+    </div>
+    
+    <div class="content">
+      <section class="input-section">
+        <div class="countdown-container">
+          <div class="countdown-label">Effacement dans:</div>
+          <div class="countdown" id="countdown">10</div>
+        </div>
+        
+        <h2><i class="fas fa-edit"></i> Entrer des données JSON</h2>
+        <textarea id="jsonInput" placeholder='{
+  "devise": "Mwal",
+  "taux": 2.5169865000573295,
+  "date": "2023-10-15",
+  "variation": 1.25,
+  "historique": {
+    "2023-10-01": 2.5023,
+    "2023-10-08": 2.5087
+  }
+}'></textarea>
+        
+        <div class="controls">
+          <button onclick="mettreAJourCours()">
+            <i class="fas fa-sync-alt"></i> Mettre à jour
+          </button>
+          <button class="secondary" onclick="chargerExemple()">
+            <i class="fas fa-redo"></i> Charger l'exemple
+          </button>
+        </div>
+        
+        <div class="error" id="errorMsg"></div>
+        
+        <div class="examples">
+          <h3><i class="fas fa-lightbulb"></i> Format des données</h3>
+          <p>Le cours du Mwal doit être spécifié dans la propriété <code>"taux"</code>.</p>
+          <p>Exemple de structure :</p>
+          <code>
+            {<br>
+            &nbsp;&nbsp;"devise": "Mwal",<br>
+            &nbsp;&nbsp;"taux": 2.5169865000573295,<br>
+            &nbsp;&nbsp;"date": "2023-10-15",<br>
+            &nbsp;&nbsp;"variation": 1.25<br>
+            }
+          </code>
+          <p style="margin-top: 15px; color: #00ffcc; font-weight: bold;">
+            <i class="fas fa-clock"></i> Les données saisies seront effacées automatiquement après 10 secondes
+          </p>
+        </div>
+        
+        <div class="security-badge">
+          <i class="fas fa-shield-alt"></i> Système sécurisé - Pas de réinitialisation
+        </div>
+      </section>
+      
+      <section class="output-section">
+        <h2><i class="fas fa-table"></i> Données détaillées</h2>
+        
+        <div class="info-box">
+          <h3><i class="fas fa-info-circle"></i> Mode d'emploi</h3>
+          <p>1. Commencez avec un cours à <strong>0.0000 €</strong></p>
+          <p>2. Saisissez des données JSON avec un champ "taux"</p>
+          <p>3. Cliquez sur "Mettre à jour" pour faire évoluer le cours</p>
+          <p>4. Les transactions sont enregistrées de façon permanente</p>
+        </div>
+        
+        <table id="tableauJSON">
+          <thead>
+            <tr>
+              <th>Clé</th>
+              <th>Valeur</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+        
+        <div class="noDataMessage" id="noDataMessage">
+          <i class="fas fa-database"></i>
+          <h3>Aucune donnée à afficher</h3>
+          <p>Saisissez des données JSON et cliquez sur "Mettre à jour"</p>
+        </div>
+      </section>
+      
+      <section class="chart-section">
+        <div class="blockchain-title">
+          <h2><i class="fas fa-chart-line"></i> Historique des Transactions</h2>
+          <div class="chart-actions">
+            <button class="chart-btn active" onclick="changeChartType('line')">Ligne</button>
+            <button class="chart-btn" onclick="changeChartType('bar')">Barres</button>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="historyChart"></canvas>
+        </div>
+      </section>
+      
+      <section class="output-section">
+        <h2><i class="fas fa-link"></i> Blockchain des Transactions</h2>
+        <p>Historique permanent de toutes les transactions effectuées</p>
+        
+        <div class="blockchain-container" id="blockchainContainer">
+          <div class="history-empty">
+            <i class="fas fa-clock"></i>
+            <h3>Aucune transaction enregistrée</h3>
+            <p>Les transactions apparaîtront ici après chaque mise à jour</p>
+          </div>
+        </div>
+      </section>
+    </div>
+    
+    <div class="footer">
+      <p>Visualiseur Blockchain du Cours du Mwal | Historique permanent | © 2023</p>
+      <p style="margin-top: 10px; color: #00aaff; font-size: 0.8rem;">
+        <i class="fas fa-shield-alt"></i> Système sécurisé - Pas de réinitialisation
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // Formater une date au format français
+    function formatDate(dateString) {
+      if (!dateString) return "-";
+      const options = { year: 'numeric', month: 'long', day: 'numeric' };
+      return new Date(dateString).toLocaleDateString('fr-FR', options);
+    }
+    
+    // Formater un nombre avec 4 décimales
+    function formatCours(value) {
+      return parseFloat(value).toFixed(4);
+    }
+    
+    // Formater l'heure
+    function formatTime(date) {
+      return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+    
+    // Historique des transactions (comme une blockchain)
+    let transactionHistory = [];
+    let chart = null;
+    let chartType = 'line';
+    let countdownInterval = null;
+    let inputTimeout = null;
+
+    // Initialiser le graphique
+    function initChart() {
+      const ctx = document.getElementById('historyChart').getContext('2d');
+      
+      if (chart) {
+        chart.destroy();
+      }
+      
+      chart = new Chart(ctx, {
+        type: chartType,
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Valeur du Mwal (€)',
+            data: [],
+            borderColor: '#00ffcc',
+            backgroundColor: chartType === 'bar' ? 'rgba(0, 255, 204, 0.3)' : 'transparent',
+            borderWidth: 3,
+            pointBackgroundColor: '#9d4edd',
+            pointRadius: 5,
+            pointHoverRadius: 8,
+            fill: chartType === 'line' ? {
+              target: 'origin',
+              above: 'rgba(0, 170, 255, 0.1)',
+              below: 'rgba(255, 107, 107, 0.1)'
+            } : false,
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: 'rgba(255, 255, 255, 0.1)'
+              },
+              ticks: {
+                color: '#bbb',
+                callback: function(value) {
+                  return '€' + value.toFixed(4);
+                }
+              }
+            },
+            x: {
+              grid: {
+                color: 'rgba(255, 255, 255, 0.05)'
+              },
+              ticks: {
+                color: '#bbb'
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              labels: {
+                color: '#00aaff',
+                font: {
+                  size: 14
+                }
+              }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(30, 30, 50, 0.9)',
+              titleColor: '#00ffcc',
+              bodyColor: '#f5f5f5',
+              borderColor: 'rgba(0, 170, 255, 0.3)',
+              borderWidth: 1,
+              padding: 12,
+              callbacks: {
+                label: function(context) {
+                  return `Valeur: €${context.parsed.y.toFixed(4)}`;
+                }
+              }
+            }
+          },
+          interaction: {
+            intersect: false,
+            mode: 'index'
+          },
+          animation: {
+            duration: 1000,
+            easing: 'easeOutQuart'
+          }
+        }
       });
-    </script>
-  </body>
+    }
+    
+    // Mettre à jour le graphique
+    function updateChart() {
+      if (!chart) return;
+      
+      const labels = transactionHistory.map(t => 
+        new Date(t.timestamp).toLocaleDateString('fr-FR', { 
+          day: '2-digit', 
+          month: 'short', 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        })
+      );
+      
+      const data = transactionHistory.map(t => t.taux);
+      
+      chart.data.labels = labels;
+      chart.data.datasets[0].data = data;
+      chart.update();
+    }
+    
+    // Changer le type de graphique
+    function changeChartType(type) {
+      chartType = type;
+      document.querySelectorAll('.chart-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      event.target.classList.add('active');
+      initChart();
+      updateChart();
+    }
+    
+    // Mettre à jour la blockchain visuelle
+    function updateBlockchain() {
+      const container = document.getElementById('blockchainContainer');
+      
+      if (transactionHistory.length === 0) {
+        container.innerHTML = `
+          <div class="history-empty">
+            <i class="fas fa-clock"></i>
+            <h3>Aucune transaction enregistrée</h3>
+            <p>Les transactions apparaîtront ici après chaque mise à jour</p>
+          </div>
+        `;
+        return;
+      }
+      
+      let html = '';
+      transactionHistory.slice().reverse().forEach((transaction, index) => {
+        const variationClass = transaction.variation >= 0 ? 'positive' : 'negative';
+        const variationSign = transaction.variation >= 0 ? '+' : '';
+        
+        html += `
+          <div class="block">
+            <div class="block-header">
+              <div class="block-index">Bloc #${transactionHistory.length - index}</div>
+              <div class="block-time">${formatTime(new Date(transaction.timestamp))}</div>
+            </div>
+            <div class="block-data">
+              <div>
+                <span class="block-label">Valeur:</span>
+                <span class="block-value">€ ${formatCours(transaction.taux)}</span>
+              </div>
+              <div>
+                <span class="block-label">Variation:</span>
+                <span class="block-variation ${variationClass}">${variationSign}${transaction.variation.toFixed(2)}%</span>
+              </div>
+              <div>
+                <span class="block-label">Date:</span>
+                <span class="block-value">${formatDate(transaction.date)}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      
+      container.innerHTML = html;
+    }
+    
+    // Ajouter une transaction à l'historique
+    function addTransaction(taux, variation, date) {
+      const transaction = {
+        taux: taux,
+        variation: variation,
+        date: date,
+        timestamp: new Date().getTime()
+      };
+      
+      transactionHistory.push(transaction);
+      updateChart();
+      updateBlockchain();
+    }
+    
+    // Démarrer le compte à rebours
+    function startCountdown() {
+      clearInterval(countdownInterval);
+      
+      let seconds = 10;
+      document.getElementById("countdown").textContent = seconds;
+      document.getElementById("countdown").classList.add("active");
+      
+      countdownInterval = setInterval(() => {
+        seconds--;
+        document.getElementById("countdown").textContent = seconds;
+        
+        if (seconds <= 0) {
+          clearInterval(countdownInterval);
+          document.getElementById("countdown").classList.remove("active");
+        }
+      }, 1000);
+    }
+    
+    // Effacer le champ après délai
+    function clearInputAfterDelay() {
+      if (inputTimeout) {
+        clearTimeout(inputTimeout);
+      }
+      
+      startCountdown();
+      
+      inputTimeout = setTimeout(() => {
+        document.getElementById("jsonInput").value = "";
+      }, 10000);
+    }
+    
+    function mettreAJourCours() {
+      const input = document.getElementById("jsonInput").value;
+      const tbody = document.getElementById("tableBody");
+      const errorMsg = document.getElementById("errorMsg");
+      const table = document.getElementById("tableauJSON");
+      const noDataMessage = document.getElementById("noDataMessage");
+      const valeurCours = document.getElementById("valeurCours");
+      const updateDate = document.getElementById("updateDate");
+      const variationElement = document.querySelector('.cours-change');
+      
+      // Réinitialiser les états
+      errorMsg.textContent = "";
+      errorMsg.style.display = "none";
+      tbody.innerHTML = "";
+      table.style.display = "none";
+      noDataMessage.style.display = "none";
+      
+      try {
+        if (!input.trim()) {
+          throw new Error("Veuillez entrer des données JSON");
+        }
+        
+        const json = JSON.parse(input);
+        
+        // Vérifier si l'objet JSON est vide
+        if (Object.keys(json).length === 0) {
+          noDataMessage.style.display = "block";
+          return;
+        }
+        
+        // Mettre à jour le cours du Mwal si disponible
+        if (json.taux !== undefined) {
+          const tauxValue = parseFloat(json.taux);
+          const previousValue = parseFloat(valeurCours.textContent) || 0;
+          valeurCours.textContent = formatCours(tauxValue);
+          
+          // Calculer la variation par rapport à la valeur précédente
+          let variation = 0;
+          if (previousValue !== 0) {
+            variation = ((tauxValue - previousValue) / previousValue) * 100;
+          }
+          
+          // Ajouter une transaction à l'historique
+          addTransaction(tauxValue, variation, json.date || new Date().toISOString().split('T')[0]);
+        }
+        
+        // Mettre à jour la date
+        if (json.date) {
+          updateDate.textContent = formatDate(json.date);
+        }
+        
+        // Mettre à jour la variation
+        if (json.variation !== undefined) {
+          const variation = parseFloat(json.variation);
+          variationElement.textContent = (variation > 0 ? "+" : "") + variation.toFixed(2) + "%";
+          variationElement.className = "cours-change " + (variation >= 0 ? "positive" : "negative");
+        }
+        
+        // Afficher les données dans le tableau
+        for (const key in json) {
+          const row = document.createElement("tr");
+          const cellKey = document.createElement("td");
+          const cellValue = document.createElement("td");
+          
+          // Ajout de classes pour le style des clés et valeurs
+          cellKey.innerHTML = `<span class="json-key">${key}</span>`;
+          
+          // Formater la valeur selon son type
+          if (typeof json[key] === 'object' && json[key] !== null) {
+            cellValue.innerHTML = `<span class="json-value">${JSON.stringify(json[key], null, 2)}</span>`;
+          } else if (typeof json[key] === 'string') {
+            cellValue.innerHTML = `<span class="json-string">"${json[key]}"</span>`;
+          } else if (typeof json[key] === 'number') {
+            cellValue.innerHTML = `<span class="json-number">${json[key]}</span>`;
+          } else {
+            cellValue.textContent = json[key];
+          }
+          
+          row.appendChild(cellKey);
+          row.appendChild(cellValue);
+          
+          // Mettre en évidence la ligne avec la clé "taux"
+          if (key.toLowerCase() === "taux") {
+            row.classList.add("highlight");
+          }
+          
+          tbody.appendChild(row);
+        }
+        
+        table.style.display = "table";
+        
+        // Démarrer le compte à rebours pour effacer les données
+        clearInputAfterDelay();
+        
+      } catch (e) {
+        errorMsg.textContent = `⚠️ Erreur: ${e.message}`;
+        errorMsg.style.display = "block";
+      }
+    }
+    
+    function chargerExemple() {
+      document.getElementById("jsonInput").value = `{
+  "devise": "Mwal",
+  "taux": 2.5169865000573295,
+  "date": "2023-10-15",
+  "variation": 1.25,
+  "historique": {
+    "2023-10-01": 2.5023,
+    "2023-10-08": 2.5087
+  }
+}`;
+      mettreAJourCours();
+    }
+    
+    // Initialiser l'application
+    window.onload = function() {
+      // Ajouter une transaction initiale
+      addTransaction(0, 0, new Date().toISOString().split('T')[0]);
+      initChart();
+      updateBlockchain();
+    };
+  </script>
+</body>
 </html>
