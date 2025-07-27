@@ -1,36 +1,433 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Chat GUN</title>
+  <meta charset="UTF-8" />
+  <title>MWOLLOWM – Validateur & Marché Décentralisé</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    #messages { list-style: none; padding: 0; }
-    li { background: #eee; margin: 5px 0; padding: 10px; border-radius: 5px; }
-  </style>
-</head>
-<body>
-  <h2>💬 Chat GUN</h2>
-  <input id="msg" placeholder="Écris un message..." />
-  <button onclick="send()">Envoyer</button>
-  <ul id="messages"></ul>
-
-  <script>
-    const gun = Gun('https://gun-dfax.onrender.com/gun'); // Ton nœud
-    const messages = gun.get('chat');
-
-    function send() {
-      const text = document.getElementById('msg').value;
-      messages.set({ text, timestamp: Date.now() });
-      document.getElementById('msg').value = '';
+    :root {
+      --bg: #0a0a0a;
+      --fg: #00ffcc;
+      --accent: #9d4edd;
+      --panel: #111;
+      --border: #00aaff;
     }
 
-    messages.map().on((data) => {
-      const li = document.createElement('li');
-      li.textContent = data.text;
-      document.getElementById('messages').appendChild(li);
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', monospace;
+      background: var(--bg);
+      color: var(--fg);
+      padding: 1rem;
+    }
+
+    h1, h2 {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    .badge {
+      background: linear-gradient(45deg, var(--accent), var(--border));
+      color: #000;
+      padding: .4em 1em;
+      border-radius: 20px;
+      font-size: .9rem;
+      font-weight: bold;
+      display: block;
+      margin: 0 auto 1rem;
+      width: fit-content;
+    }
+
+    .grid {
+      display: grid;
+      gap: 1.5rem;
+      max-width: 1000px;
+      margin: auto;
+      grid-template-columns: 1fr;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+    }
+
+    input, textarea, button {
+      width: 100%;
+      padding: .6rem;
+      margin-top: .5rem;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      background: var(--panel);
+      color: var(--fg);
+      font-family: inherit;
+    }
+
+    button {
+      background: linear-gradient(to right, var(--fg), var(--accent));
+      color: #000;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    #graph-container {
+      position: relative;
+      height: 300px;
+    }
+
+    .zoom-controls {
+      display: flex;
+      gap: .5rem;
+      justify-content: center;
+      margin-top: .5rem;
+    }
+
+    .zoom-controls button {
+      width: auto;
+    }
+
+    #blocs {
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 1rem;
+    }
+
+    .bloc {
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: .6rem;
+      margin-bottom: .5rem;
+      font-size: .85rem;
+    }
+
+    @media (min-width: 700px) {
+      .grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .input-group {
+      position: relative;
+    }
+
+    .validation-status {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.2rem;
+    }
+
+    .success { color: #00ff00; }
+    .error { color: #ff0000; }
+    .loading { color: #ffff00; }
+  </style>
+</head>
+
+<body>
+  <h1>💎 MWOLLOWM – Validateur & Marché Décentralisé</h1>
+  <span class="badge">Décentralisé • Temps réel • Auto-validation • Graphique</span>
+
+  <div class="grid">
+    <!-- Cours moyen -->
+    <div class="panel">
+      <h2>Cours moyen actuel</h2>
+      <div id="coursMoyen" style="font-size: 2rem; color: var(--accent);">0.00000000</div>
+    </div>
+    
+
+      <!-- Total MWAL -->
+  <div class="panel">
+    <h2>Total MWAL validé</h2>
+    <div id="luthTotal" style="font-size: 2rem; color: var(--accent);">0.00000000</div>
+  </div>
+
+
+    <!-- Graphique -->
+    <div class="panel">
+      <h2>📈 Graphique du cours</h2>
+      <div id="graph-container"><canvas id="graph"></canvas></div>
+      <div class="zoom-controls">
+        <button onclick="zoomIn()"><i class="fas fa-search-plus"></i></button>
+        <button onclick="zoomOut()"><i class="fas fa-search-minus"></i></button>
+        <button onclick="resetZoom()"><i class="fas fa-expand-arrows-alt"></i></button>
+      </div>
+    </div>
+
+    <!-- Validation Base64 (avec auto-validation) -->
+    <div class="panel">
+      <h2>🔐 Validation Base64 (Auto)</h2>
+      <input id="username" placeholder="Nom d'utilisateur" />
+      <input id="token" type="password" placeholder="Clé privée" />
+      <div class="input-group">
+        <input 
+          id="base64" 
+          placeholder="Collez votre identifiant Base64 ici"
+          autocomplete="off"
+        />
+        <span id="base64-status" class="validation-status"></span>
+      </div>
+    </div>
+
+    <!-- Ajout JSON -->
+    <div class="panel">
+      <h2>🧩 Ajouter un bloc JSON</h2>
+      <textarea id="jsonInput" placeholder='{"taux":0.1234,"date":"2025-07-27"}'></textarea>
+      <button onclick="ajouterJSON()">Ajouter & Miner</button>
+    </div>
+
+    <!-- Liste des blocs -->
+    <div class="panel">
+      <h2>📦 Derniers blocs minés</h2>
+      <div id="blocs"></div>
+    </div>
+    <!-- Historique MWAL validés -->
+    <div class="panel">
+      <h2>📋 Historique MWAL validés</h2>
+      <div id="mwalHistorique" style="max-height: 300px; overflow-y: auto;"></div>
+    </div>
+  </div>
+
+  <script>
+    // CONFIG
+    const TOKEN_SECRET = "moalum-777";
+    const DIFFICULTY = 3;
+    const gun = Gun(['https://gun-dfax.onrender.com/gun']);
+
+    // DB
+    const coursDB = gun.get('mwollowm_cours');
+    const luthDB = gun.get('mwollowm_luth');
+    const blocsDB = gun.get('mwollowm_blocs');
+
+    // ÉTAT LOCAL
+    let chart;
+    let coursHistory = [];
+    let totalLuth = 0;
+    let cumulBase64 = parseFloat(localStorage.getItem("cumulBase64") || "0");
+    let totalJsonMontants = parseFloat(localStorage.getItem("totalJsonMontants") || "0");
+    let totalJsonBlocs = parseInt(localStorage.getItem("totalJsonBlocs") || "0");
+    const usedBase64 = new Set(JSON.parse(localStorage.getItem("usedBase64") || "[]"));
+
+    // UTILS
+    const sha256 = data => CryptoJS.SHA256(JSON.stringify(data)).toString();
+    const mine = block => {
+      block.nonce = 0;
+      block.hash = sha256(block);
+      while (!block.hash.startsWith("0".repeat(DIFFICULTY))) {
+        block.nonce++;
+        block.hash = sha256(block);
+      }
+      return block;
+    };
+
+    // CHART
+    function initChart() {
+      const ctx = document.getElementById("graph");
+      chart = new Chart(ctx, {
+        type: "line",
+        data: { labels: [], datasets: [{ label: "Cours", data: [], borderColor: "#00ffcc", fill: false }] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    }
+
+    function updateChart(taux) {
+      const label = new Date().toLocaleTimeString();
+      coursHistory.push(taux);
+      if (chart.data.labels.length > 50) {
+        chart.data.labels.shift();
+        chart.data.datasets[0].data.shift();
+      }
+      chart.data.labels.push(label);
+      chart.data.datasets[0].data.push(taux);
+      chart.update();
+    }
+
+    function zoomIn()  { chart.options.scales.y.max = Math.max(...chart.data.datasets[0].data) * 1.2; chart.update(); }
+    function zoomOut() { chart.options.scales.y.max = Math.max(...chart.data.datasets[0].data) * 0.8; chart.update(); }
+    function resetZoom() { chart.options.scales.y.max = undefined; chart.update(); }
+
+    // AFFICHAGE
+    function addBlocToUI(bloc) {
+      const div = document.createElement("div");
+      div.className = "bloc";
+      div.innerHTML = `
+        <b>ID:</b> ${bloc.id}<br>
+        <b>Montant:</b> ${bloc.montant.toFixed(8)}<br>
+        <b>Auteur:</b> ${bloc.auteur}<br>
+        <b>Hash:</b> ${bloc.hash.slice(0, 12)}…<br>
+        <b>Nonce:</b> ${bloc.nonce}
+      `;
+      document.getElementById("blocs").prepend(div);
+    }
+
+    function updateStats() {
+      const moyenne = totalJsonBlocs > 0 ? totalJsonMontants / totalJsonBlocs : 0;
+      document.getElementById("coursMoyen").textContent = moyenne.toFixed(8);
+      document.getElementById("luthTotal").textContent = totalLuth.toFixed(8);
+    }
+
+    // AUTO-VALIDATION
+    let validationTimeout;
+    document.getElementById("base64").addEventListener("input", function() {
+      clearTimeout(validationTimeout);
+      const base64 = this.value.trim();
+      const statusEl = document.getElementById("base64-status");
+      
+      if (!base64) {
+        statusEl.textContent = "";
+        statusEl.className = "validation-status";
+        return;
+      }
+
+      statusEl.textContent = "⏳";
+      statusEl.className = "validation-status loading";
+
+      validationTimeout = setTimeout(() => {
+        const username = document.getElementById("username").value.trim() || "anonyme";
+        const token = document.getElementById("token").value.trim();
+
+        if (token !== TOKEN_SECRET) {
+          statusEl.textContent = "❌";
+          statusEl.className = "validation-status error";
+          return;
+        }
+
+        if (usedBase64.has(base64)) {
+          statusEl.textContent = "♻️";
+          statusEl.className = "validation-status error";
+          return;
+        }
+
+        try {
+          const montant = parseFloat(atob(base64));
+          if (!montant || montant <= 0) throw new Error();
+
+          const bloc = mine({
+            id: Date.now().toString(),
+            type: "base64",
+            montant,
+            auteur: username,
+            timestamp: new Date().toISOString()
+          });
+
+          blocsDB.set(bloc);
+          usedBase64.add(base64);
+          localStorage.setItem("usedBase64", JSON.stringify([...usedBase64]));
+
+          cumulBase64 += montant;
+          totalLuth += montant;
+          localStorage.setItem("cumulBase64", cumulBase64.toString());
+
+          addBlocToUI(bloc);
+          updateStats();
+
+          statusEl.textContent = "✅";
+          statusEl.className = "validation-status success";
+          
+          document.getElementById("base64").value = "";
+          setTimeout(() => {
+            statusEl.textContent = "";
+            statusEl.className = "validation-status";
+          }, 2000);
+
+        } catch {
+          statusEl.textContent = "⚠️";
+          statusEl.className = "validation-status error";
+        }
+      }, 1000); // Délai de 1 seconde après la saisie
     });
+
+    // ACTIONS JSON
+    function ajouterJSON() {
+      const raw = document.getElementById("jsonInput").value.trim();
+      if (!raw) return alert("❌ JSON vide");
+      if (cumulBase64 <= 0) return alert("❌ Aucune validation Base64 disponible");
+
+      try {
+        const data = JSON.parse(raw);
+        const montant = parseFloat(data.taux);
+        if (!montant || montant <= 0) return alert("❌ Champ 'taux' invalide");
+        if (montant > cumulBase64) return alert("❌ Taux supérieur au cumul Base64");
+
+        const bloc = mine({
+          id: Date.now().toString(),
+          type: "json",
+          montant,
+          auteur: document.getElementById("username").value.trim() || "JSON",
+          timestamp: new Date().toISOString()
+        });
+
+        blocsDB.set(bloc);
+
+        totalJsonMontants += montant;
+        totalJsonBlocs += 1;
+        localStorage.setItem("totalJsonMontants", totalJsonMontants.toString());
+        localStorage.setItem("totalJsonBlocs", totalJsonBlocs.toString());
+
+        addBlocToUI(bloc);
+        updateChart(montant);
+        updateStats();
+         // ✅ Ajoute ceci ici :
+        const luthID = `base64-${Date.now()}`;
+        luthDB.get(luthID).put({
+          utilisateur: document.getElementById("username").value.trim() || "JSON",
+          montant: montant,
+          timestamp: new Date().toISOString()
+        });
+
+
+        document.getElementById("jsonInput").value = "";
+      } catch {
+        alert("❌ JSON invalide");
+      }
+    }
+        
+
+    // SYNC
+    blocsDB.map().on((data, id) => {
+      if (!data || data._) return;
+      totalLuth += data.montant;
+      if (data.type === "json") {
+        totalJsonMontants += data.montant;
+        totalJsonBlocs += 1;
+      }
+      updateStats();
+    });
+
+    // INIT
+    initChart();
+    updateStats();
+    document.getElementById("username").value = localStorage.getItem("mw_user") || "";
+    document.getElementById("username").addEventListener("input", e => localStorage.setItem("mw_user", e.target.value));
+    //
+   
+
+    // 🔁 Affichage en temps réel des validations MWAL depuis luthDB
+    luthDB.map().on((data, id) => {
+      if (!data || data._) return;
+
+      const div = document.createElement("div");
+      div.className = "bloc";
+      div.innerHTML = `
+        <b>ID:</b> ${id}<br>
+        <b>Validateur:</b> ${data.utilisateur || "inconnu"}<br>
+        <b>Montant:</b> ${data.montant?.toFixed?.(8) || "?"} MWAL<br>
+        <b>Timestamp:</b> ${data.timestamp || "?"}
+      `;
+
+      document.getElementById("mwalHistorique").prepend(div);
+    });
+
   </script>
 </body>
 </html>
