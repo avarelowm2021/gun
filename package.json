@@ -1,13 +1,12 @@
 {
-  "name": "gun-server",
+  "name": "gun-node",
   "version": "1.0.0",
-  "description": "Gun relay with ws support",
-  "main": "examples/http.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node examples/http.js"
+    "start": "node server.js"
   },
   "dependencies": {
-    "gun": "^0.2020.1239",
-    "ws": "^8.12.0"
+    "express": "^4.18.2",
+    "gun": "^0.2020.1237"
   }
 }
