@@ -1,12 +1,12 @@
 {
-  "name": "gun-node",
+  "name": "gun-render-server",
   "version": "1.0.0",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "scripts": { "start": "node server.js" },
   "dependencies": {
-    "express": "^4.18.2",
-    "gun": "^0.2020.1237"
+    "express": "^4.19.2",
+    "gun": "^0.2020.1237",
+    "ws": "^8.16.0"
   }
 }
